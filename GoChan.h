@@ -8,6 +8,7 @@
 #include <queue>
 #include <mutex>
 #include "semaphore.h"
+#include <Buffer.h>
 using std::queue;
 using std::mutex;
 using std::lock_guard;
@@ -26,34 +27,37 @@ template <class T>
 class GoChan {
 private:
     bool opened;
-    queue<T> storage;
+    std::unique_ptr<Buffer<T>> buffer;
     mutex chanMutex;
     semaphore readSubscriber;
 
 public:
-    GoChan():opened(true) {}
-    //disable move and copy constructors
+    explicit GoChan(Buffer<T>* _buffer):opened(true), buffer(_buffer) {}
+    //disable default, move and copy constructors
+    GoChan() = delete;
     GoChan(const GoChan&) = delete;
     GoChan(GoChan&&) = delete;
     GoChan& operator=(const GoChan&) = delete;
     GoChan& operator=(GoChan &&) = delete;
 
-    bool Write(T& newElem);
-    bool Write(T &&newElem);
-    bool Read(T& readElem);
+    ~GoChan(){
+        if(opened)
+            Close();
+    }
+
     void Close();
 
     friend bool operator<<(GoChan<T> &chan, T &newElem){
         LOCK(chan)
         WRITE_BEGIN(chan)
-        chan.storage.push(newElem);
+        chan.buffer->Write(newElem);
         WRITE_END(chan)
     }
 
     friend bool operator<<(GoChan<T> &chan, T &&newElem){
         LOCK(chan)
         WRITE_BEGIN(chan)
-        chan.storage.push(std::move(newElem));
+        chan.buffer->Write(newElem);
         WRITE_END(chan)
     }
 
@@ -62,8 +66,7 @@ public:
         lock_guard<mutex> _guard(chan.chanMutex);
         if(!chan.opened)
             return false;
-        readElem = std::move(chan.storage.front());
-        chan.storage.pop();
+        chan.buffer->Read(readElem);
         return true;
     }
 };
@@ -73,8 +76,7 @@ template<class T>
 void GoChan<T>::Close() {
     LOCK((*this))
     opened = false;
-    queue<T> empty;
-    storage.swap(empty);
+    buffer->Clear();
     readSubscriber.notify_all();
 }
 

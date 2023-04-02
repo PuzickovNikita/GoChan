@@ -2,17 +2,7 @@
 #include <chrono>
 #include <thread>
 #include "GoChan.h"
-
-class movable{
-public:
-    movable() = default;
-    movable(const movable&){
-        std::cout << "copy" << '\n';
-    }
-    movable(movable&&) noexcept {
-        std::cout << "move" << '\n';
-    }
-};
+#include "QueueBuffer.h"
 
 void f2(GoChan<int> *chan){
     int tmp;
@@ -32,7 +22,7 @@ void f3(GoChan<int> *chan){
 
 int main() {
 
-    GoChan<int> chan = GoChan<int>();
+    GoChan<int> chan = GoChan<int>(new QueueBuffer<int>);
     for(int i = 0; i < 10; ++i){
         chan << i;
     }

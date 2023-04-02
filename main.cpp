@@ -16,7 +16,7 @@ public:
 
 void f2(GoChan<int> *chan){
     int tmp;
-    while((*chan).Read(tmp)){
+    while(*chan >> tmp){
         std::cout<<tmp<<'\n';
         std::this_thread::sleep_for(std::chrono::seconds(2));
     }
@@ -24,7 +24,7 @@ void f2(GoChan<int> *chan){
 
 void f3(GoChan<int> *chan){
     int tmp;
-    while((*chan).Read(tmp)){
+    while(*chan >> tmp){
         std::cout<<tmp<<'\n';
         std::this_thread::sleep_for(std::chrono::seconds(3));
     }
@@ -34,7 +34,7 @@ int main() {
 
     GoChan<int> chan = GoChan<int>();
     for(int i = 0; i < 10; ++i){
-        chan.Write(i);
+        chan << i;
     }
 
     std::thread t1(f2,&chan);
